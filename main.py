@@ -16,12 +16,14 @@ from io import BytesIO
 import cv2
 import numpy as np
 from flask import Flask, request, jsonify, make_response
+from flask_cors import CORS
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Load environment variables
 load_dotenv()
@@ -227,6 +229,12 @@ def generate_pdf(json_data):
     # Reset the buffer position to the beginning
     pdf_buffer.seek(0)
     return pdf_buffer
+
+@app.route('/get-property-info', methods=['GET', 'POST'])
+def get_property_info():
+    if request.method == 'POST':
+        return fetch_property_data()
+    return jsonify({"message": "Please use POST method with property data"}), 200
 
 @app.route('/fetch-property-data', methods=['POST'])
 def fetch_property_data():
