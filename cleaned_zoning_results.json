@@ -1,0 +1,29 @@
+{
+    "EFUTRB": {
+        "maximum_building_height": "Not specified",
+        "maximum_lot_coverage": "Not specified",
+        "front_setback": "Not specified",
+        "side_setback": "Not specified",
+        "rear_setback": "Not specified",
+        "solar_setback": "Not specified",
+        "special_setback": "Not specified"
+    },
+    "MUA10": {
+        "maximum_building_height": "Not specified",
+        "maximum_lot_coverage": "Not specified",
+        "front_setback": "Not specified",
+        "side_setback": "Not specified",
+        "rear_setback": "Not specified",
+        "solar_setback": "Not specified",
+        "special_setback": "Not specified"
+    },
+    "LM": {
+        "maximum_building_height": "Not specified",
+        "maximum_lot_coverage": "Not specified",
+        "front_setback": "Not specified",
+        "side_setback": "Not specified",
+        "rear_setback": "Not specified",
+        "solar_setback": "Not specified",
+        "special_setback": "Not specified"
+    }
+}

@@ -1,0 +1,27 @@
+Residential Design Requirements  for the  Entire County  
+ 
+ 
+ 
+ 
+Soil Bearing  
+Capacity  Assumed 1500 psf  max  
+Without engineered  soil bearing  analysis  
+Seismic  C for  2017 Oregon Residential  Specialty  Code only  
+Wind Pressure  15lbs per square  foot 
+Weathering  Severe  
+Frost Depth  18" min. 
+ 
+Ultimate Design  
+Wind Speed   
+110 mph  
+85 mph 3  sec. gusts   
+Snow  Load  Specific  to site  location  address  [Snow  Load  
+Research ] Provide link to DIAL  
+Exposure  "C" 
+Current  Residential  
+Code   
+2017  Oregon Residential  Specialty  Code  
+Current  Commercial  
+Code   
+2014  Oregon  Structural  Specialty  Code  
+ 

@@ -1,0 +1,549 @@
+<html class="js flexbox flexboxlegacy canvas canvastext webgl no-touch geolocation postmessage no-websqldatabase indexeddb hashchange history draganddrop websockets rgba hsla multiplebgs backgroundsize borderimage borderradius boxshadow textshadow opacity cssanimations csscolumns cssgradients cssreflections csstransforms csstransforms3d csstransitions fontface generatedcontent video audio localstorage sessionstorage webworkers no-applicationcache svg inlinesvg smil svgclippaths dj_webkit dj_chrome dj_contentbox" style=""><head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Deschutes County Property Information">
+
+
+    <title>Dial - Deschutes County Property Information</title>
+
+    <link href="/favicon.ico" rel="shortcut icon" type="image/x-icon">
+
+    <script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/nls/jsapi_en-us.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/dojox/gfx/svg.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/IdentifyParameters.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/IdentifyTask.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/PrintTask.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/PrintParameters.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/PrintTemplate.js"></script><script type="text/javascript" charset="utf-8" src="/Assets/js/modules/Basemaps.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/dijit/BasemapGallery.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/dojox/gfx/filters.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/dojox/gfx/svgext.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/IdentifyResult.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/Geoprocessor.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/dojox/gfx/canvas.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/dojox/json/query.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/LegendLayer.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/dijit/BasemapLayer.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/dijit/Basemap.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/layers/WebTiledLayer.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/dojox/main.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/dijit/nls/BasemapGallery_en-us.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/layers/VectorTileLayerImpl.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/JobInfo.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/GPMessage.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/LinearUnit.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/DataFile.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/RasterData.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/Date.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/ParameterValue.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/tasks/GPResultImageLayer.js"></script><script type="text/javascript" charset="utf-8" src="https://js.arcgis.com/3.35/esri/layers/nls/VectorTileLayerImpl_en-us.js"></script><script src="/Assets/bp/js/vendor/modernizr?v=K-FFpFNtIXPUlQamnX3qHX_A5r7TM2xbAgcuEmpm3O41"></script>
+
+
+    <!-- Styles -->
+    <link href="/Assets/bp/css/boiler?v=kVpXN_7pKNh3gYrHWuFo2RsitgBzvDOr4ZlLo8eLY841" rel="stylesheet">
+<link href="/Assets/Plugins/smoothness/jqueryui?v=oy_pdipws9Y1qbI5mnWXaoklhSJDC1XIyhqWD1RmmX81" rel="stylesheet">
+<link href="/Assets/Stylesheets/main?v=xcXtYn_hITbbJ-XgyYbm3tP-WB5W8UsuEOgKT8y9ors1" rel="stylesheet">
+<link href="/Assets/Plugins/showLoading/css/showLoading?v=x-rcHZs3_kEZiJWKeviWeK6e-amGiT6dRcK57zq4fFY1" rel="stylesheet">
+
+
+    <!-- Print styles (Can't bundle because of media=print) -->
+    <link href="/Assets/Stylesheets/print.css" rel="stylesheet" type="text/css" media="print">
+
+    <link href="//js.arcgis.com/3.35/dijit/themes/claro/claro.css" rel="stylesheet" type="text/css"><link href="//js.arcgis.com/3.35/esri/css/esri.css" rel="stylesheet" type="text/css"><link href="/Assets/Stylesheets/maps.css" rel="stylesheet" type="text/css">
+
+    <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-PC053C2B01"></script>
+    <script type="text/javascript">
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-PC053C2B01');
+
+
+        //--OLD GOOGLE CODE
+        //var _gaq = _gaq || [];
+        //_gaq.push(['_setAccount', 'UA-70929-7']);
+        //_gaq.push(['_trackPageview']);
+
+        //(function () {
+        //    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        //    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        //    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+        //})();
+
+    </script>
+
+    
+
+<script type="text/javascript" charset="UTF-8" src="https://maps.googleapis.com/maps-api-v3/api/js/60/1/common.js"></script><script type="text/javascript" charset="UTF-8" src="https://maps.googleapis.com/maps-api-v3/api/js/60/1/util.js"></script></head>
+<body id="appbody">
+
+
+    <header>
+        <div id="uxGlobalNavTabs">
+            <ul class="globaltabs clearme">
+                <!-- Search bar types, id's to control visibility based on context -->
+                <li class="appsMainNav"><p>Dial Links:</p></li>
+
+                <li class="appsMainNav" id="dcGlobalNavHome"><a href="/"><span id="dcAppNameHome" class="dcAppName">Dial </span>Home</a></li>
+
+                <li class="appsMainNav" id="dcGlobalNavHelp">
+                    <dl class="dropdown" id="dcAppHelp">
+                        <dt>
+                            <a href="#">
+                                Dial Help
+                                <span class="ui-icon ui-icon-triangle-1-s"></span>
+                            </a>
+                        </dt>
+                        <dd>
+                            <ul>
+                                <li><a data-ajax="false" href="/Help/HowTo" target="_blank">How to Use Dial</a></li>
+                                <li><a data-ajax="false" href="/Help/About" target="_blank">About</a></li>
+                                <li><a data-ajax="false" href="/Help/WhatsNew" target="_blank">What's New</a></li>
+                                <li><a href="//weblink.deschutes.org/Forms/contact?Contact_Purpose=Help%20with%20the%20DIAL/Property%20Research%20Website" target="_blank">Help/Feedback Form</a></li>
+
+                            </ul>
+                        </dd>
+                    </dl>
+                </li>
+
+                <li class="appsMainNav" id="dcGlobalNavDivider"><p>|</p></li>
+
+                <li class="appsMainNav"><p>Deschutes County Links:</p></li>
+
+                <li class="appsMainNav" id="dcGlobalNavDeschutesOrg"><a href="http://www.deschutes.org/" target="_blank">Home</a></li>
+
+                <li class="appsMainNav" id="dcGlobalNavLandInfor">
+                    <dl class="dropdown" id="dcGlobalLandInfor">
+                        <dt>
+                            <a href="#">
+                                Other Property Applications
+                                <span class="ui-icon ui-icon-triangle-1-s"></span>
+                            </a>
+                        </dt>
+                        <dd>
+                            <ul>
+                                <li><a href="/">Dial</a></li>
+                                <li><a href="//www.deschutes.org/taxmaps" target="_blank">Taxmaps</a></li>
+                                <li><a href="//www.deschutes.org/taxpayments" target="_blank">Tax Payments</a></li>
+                                <li><a href="//www.deschutes.org/clerk/page/records-research" target="_blank">Records Research</a></li>
+                                <li><a href="//www.deschutes.org/cd/page/development-documents-devdocs" target="_blank">Development Documents</a></li>
+                                <li><a href="//www.deschutes.org/911/page/public-safety-maps" target="_blank">Public Safety Maps</a></li>
+                                <li><a href="https://maps.deschutes.org/custom/survey/research/ " target="_blank">Survey Research</a></li>
+                            </ul>
+                        </dd>
+                    </dl>
+                </li>
+
+                <li class="appsMainNav" id="dcGlobalNavOnlineApps">
+                    <dl class="dropdown" id="dcGlobalOnlineApps">
+                        <dt>
+                            <a href="#">
+                                Other Online Applications
+                                <span class="ui-icon ui-icon-triangle-1-s"></span>
+                            </a>
+                        </dt>
+                        <dd>
+                            <ul>
+                                <li><a href="https://www.deschutes.org/health/page/restaurant-and-health-inspection-scores" target="_blank" style="white-space: nowrap;">Food/Lodging/Pool Inspection Scores</a></li>
+                                <li><a href="http://buildingpermits.oregon.gov" target="_blank">Online Building Permits</a></li>
+                                <li><a href="//www.deschutes.org/clerk/page/elections-and-voting" target="_blank">Election Information</a></li>
+                                <li><a href="http://apps.wrd.state.or.us/apps/gw/well_log/" target="_blank">OWRD - Well Log Query</a></li>
+                            </ul>
+                        </dd>
+                    </dl>
+                </li>
+                <!-- End of global nav -->
+            </ul>
+        </div>
+
+        <!--Donut#B5F48223BB4B509F0BE757C1D8F1748B54CF3297D2EA4A5AF5AC0B9253371B99C3AEC903E59036C2AC27E313E2331909D2A4951278B697530EB1CE3F556B1A2ED34EEB8DAC8166D4AE742D2AF04DFA533B860E9A4A6988F86E401E5E0DBD88F66328C895AAAE5A8D6BE936B093601FEA96A3654B0555448A57ACA14CF5D85514EB7402D1B26A0746C983D07E552E366E4F5D483CE500F566D1880C95A3FDE46A3293D1F24424208D73EC03BE08A787EE8502D6D4C506FE009FAC909ABFEF1FD8ACCBB939DB9E59879D2F67E31064AF2CD18534ADD64D73EFAEA7681B5D95FF481E828733B250F251FDC5E84BC17679304B73DAE1E7FF4C5CCC323A53A8ED73326D67CE4E05F1AE55EC007AF16769486BCF61E182A5A6EE73AD94EF6E6A55894FFEEC977A4F91BE86BD823CC468A4B385B944130C2228CF2F5D3ACF447D5E5C7460921040CB7CE1A57FA4B74537D6E58F5B227DEAF5BCE685D8F03EDA679142F22F944484B33EA8BD7C8F23EE88B230E3337CAFCA5668788773FBDF13A855D8144D9AC35B7026EE71F908356F5740C7BF#-->
+    <div id="login">
+            <p class="noPrint">To access Dial Enhanced, please log in.&nbsp; &nbsp;</p>
+            <div class="clearme"></div>
+            <p>
+                <a href="/Account/Register" id="registerLink">Register</a>
+                &nbsp; &nbsp;
+                <a href="/Account/Login" id="loginLink">Log in</a>
+                &nbsp; &nbsp;
+            </p>
+    </div>
+<!--EndDonut-->
+
+        <div id="masthead-app">
+            <h2>Deschutes County Property Information</h2>
+            <h1><span id="dcAppNameTitle" class="dcAppName">Dial</span></h1>
+            <div class="editionLabel">
+            </div>
+        </div>
+        <div class="clearme"></div>
+    </header>
+
+    <div id="content-app">
+
+        <div id="uxSearchTabs" style="display: block;">
+            <ul class="linktabs clearme">
+                <!-- Search bar types, id's to control visibility based on context -->
+
+
+
+                    <li class="dialMainNav"><a href="/Search/General">New Search</a> |</li>
+
+
+
+                            <li class="dialMainNav"><a href="/Real/InteractiveMap/131527">Interactive Map</a></li>
+
+                <!-- End of context-sensitive search types -->
+            </ul>
+        </div>
+
+
+<div id="navigation">
+    <!--<h3>Other Reports</h3>-->
+    <ul class="top-level"> 
+        <li><a href="/Real/ReportOptions/131527">View / Print Report</a></li>
+        <li class="active">
+            <p>
+            <a href="/Real/Index/131527">Assessment &amp; Taxation</a>
+            </p>
+            <ul class="active-sub-level">
+                <li class="selected"><a href="/Real/Index/131527">Summary</a></li>
+                <li><a href="/Real/Valuation/131527">Valuation</a></li>
+                <li><a href="/Real/TaxInformation/131527">Tax Information</a></li>
+                <li><a href="/Real/Sales/131527">Sales</a></li>
+                <li><a href="/Real/Improvements/131527">Land and Structures</a></li>
+                <li><a href="/Real/SpecialAssessments/131527">Special Assessments</a></li>
+
+                <li><a data-ajax="false" href="/API/Real/GetReport/131527?report=TaxMap" target="_blank">Tax Map</a></li>
+                <li><a href="/Real/TaxLotHistory/131527">Tax Lot History</a></li>
+                <li><a href="/Real/RelatedAccounts/131527">Related Accounts</a></li>
+            </ul>
+        </li>
+        <li><a href="/Real/Warnings/131527">Warnings/Notations</a></li>
+        <li class="parent">
+            <p>
+            <a href="/Real/ServiceProviders/131527">Service Providers</a>
+            </p>
+           <ul class="sub-level">
+                <li><a href="/Real/ServiceProviders/131527">Summary</a></li>
+                <li><a href="/Real/CityMap/131527">City Map</a></li>
+                <li><a href="/Real/ElementarySchoolMap/131527">Elem. School Area Map</a></li>
+                <li><a href="/Real/MiddleSchoolMap/131527">Middle School Area Map</a></li>
+                <li><a href="/Real/HighSchoolMap/131527">High School Area Map</a></li>
+                <li><a href="/Real/FireTaxMap/131527">Fire Tax District Map</a></li>
+                <li><a href="/Real/ParkTaxMap/131527">Park Tax District Map</a></li>
+                <li><a href="/Real/RoadTaxMap/131527">Road Tax District Map</a></li>
+                <li><a href="/Real/SchoolTaxMap/131527">School Tax District Map</a></li>
+                <li><a href="/Real/SewerTaxMap/131527">Sewer Tax District Map</a></li>
+                <li><a href="/Real/WaterTaxMap/131527">Water Tax District Map</a></li>
+
+            </ul>
+        </li>
+        <li class="parent">
+            <p>
+            <a href="/Real/DevelopmentSummary/131527">Development</a>
+            </p>
+            <ul class="sub-level">
+                <li><a href="/Real/DevelopmentSummary/131527">Summary</a></li>
+                <li><a href="/Real/Permits/131527">Permits</a></li>
+                <li><a href="/Real/ZoningMap/131527">Zoning Map</a></li>
+                <li><a href="/Real/DevelopmentDocs/131527">Documents</a></li>
+            </ul>
+        </li>
+
+
+
+
+        <li class="parent">
+            <p>Transportation</p>
+            <ul class="sub-level">
+                <li><a href="/Real/RoadMap/131527">Road Map</a></li>
+                <li><a href="/Real/PublicSafetyMaps/131527">Public Safety Maps</a></li>
+            </ul>
+        </li>
+
+
+
+
+
+        <li><a href="/Help/HowTo" target="_Blank">How to Use Dial</a></li>
+
+
+    </ul>
+</div>
+<!-- #navigation -->
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+
+
+
+<div id="content-app-container">
+
+    <div id="results-breadcrumb"><div class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false" onclick="window.print()" style="float:right;">Print Page</div><div id="uxPrintReport" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" role="button" aria-disabled="false" style="float:right;">Print Report</div>
+        Assessment &amp; Taxation &gt;&gt; Summary
+    </div>
+
+    <div id="results-panel">
+        <div id="results-border">
+            <div id="results-title">
+                Summary for account #131527
+            </div>
+        </div>
+        <div id="results-data">
+            <p>
+                Summary information is displayed for the selected property.
+                <span class="noPrint">More detailed information and maps are available using the menu on the left side of the screen.</span>
+            </p>
+            <div id="uxReportLeftColumn">
+                
+                <p class="uxReportSectionHeader">Account Information</p>
+<p class="uxAccountInformation">
+    <strong>Mailing Name:</strong> WRIGHT, JAMES M ET AL<br>
+    <strong>Map and Taxlot:</strong> <span id="uxMapTaxlot">171104A000500 </span><br>
+    <strong>Account:</strong> 131527<br>
+
+        <strong>Situs Address:</strong> <span id="uxSitusAddress">64350 SISEMORE RD, BEND, OR 97703</span><br>
+
+    <strong>Tax Status:</strong> Assessable<br>
+</p>
+
+
+
+
+
+
+
+
+
+
+                    <p>
+                        This account has 1 <a href="/Real/RelatedAccounts/131527">related accounts</a>.
+                    </p>
+                <p class="uxReportSectionHeader">
+                    Ownership
+                </p>
+                <p>
+                    <span class="noPrint">
+                        <a data-ajax="false" href="/API/Real/GetReport/131527?report=Names&amp;type=R" target="_blank">View Complete Ownership Report (PDF)</a>
+                        <br>
+                    </span>
+                    <strong>Mailing To:</strong><br>
+                    &nbsp;&nbsp;WRIGHT, JAMES M ET AL<br>
+                    &nbsp;&nbsp;18295 TUMALO RESERVOIR RD<br>
+                    &nbsp;&nbsp;BEND, OR 97703
+                    <span class="noPrint">
+                        <br>
+                        &nbsp;&nbsp;<a href="http://www.deschutes.org/addresschange" target="_blank">Change of Mailing Address Form</a>
+
+
+                        <span id="uxOverviewMap" class="hideMobile" style="">
+                            <br><br>&nbsp;&nbsp;<img src="/Assets/Images/global/map.png" style="float:left;"><a href="#" id="uxOpenMap">View Overview Map</a>
+                        </span>
+
+                    </span>
+
+                </p>
+            </div>
+            <div id="uxReportMiddleColumn">
+                <p class="uxReportSectionHeader">
+                    Taxes
+                </p>
+                <p>
+                    <span class="noPrint">
+
+                        <span id="uxTaxSummary"></span>
+                        <strong style="margin-bottom:4px;display:inline-block">
+                        <a data-ajax="false" href="/API/Real/GetReport/131527?report=TaxSummary&amp;type=R" target="_blank">Current Balance Due (PDF)</a>
+                            <br>
+                        <a href="http://www.deschutes.org/taxpayments" target="_blank">Pay Your Property Taxes</a>
+                        </strong>
+                        <br>
+
+<a data-ajax="false" href="/API/Real/GetReport/131527?report=TaxStatement&amp;type=R&amp;codeArea=2006" target="_blank">Current Statement (PDF)</a>                            <br>
+
+                        <a href="/Real/TaxInformation/131527">Tax Payments &amp; History</a>
+                        <br>
+                                                                                                                          </span>
+                    Tax Code Area: 2006
+                </p>
+
+                <p class="uxReportSectionHeader">
+                    Assessment
+                </p>
+
+                <p>
+                    <strong>Assessor Property Description: <span class="ui-dial-icon-blue ui-icon-info" name="uxPropDesc" title="Click here for explanation.">131527</span></strong><br>
+
+                        <strong><a href="https://recordings.deschutes.org/DigitalResearchRoomPublic/Image/DocumentImage?year=2006&amp;itemId=63560" target="_blank">PP2006-63</a></strong>
+
+                    &nbsp;&nbsp;Lot PARCEL 1 Block 
+                </p>
+
+                <p>
+                    <strong>Assessor Acres:</strong> 17.38
+                    <br>
+                    <strong>Property Class:</strong> 401 -- TRACT
+                </p>
+
+
+                <p>
+                </p>
+
+            </div>
+            <div id="uxReportRightColumn">
+                <p class="uxReportSectionHeader">Valuation</p>
+
+                    <p>
+                        <strong><a href="/Real/Valuation/131527">Current Year Value Summary</a></strong><br>
+                        &nbsp;&nbsp;As of Jan.1, 2024 <br>
+
+                        &nbsp;&nbsp;2024 - 2025 Tax Year
+                    </p>
+                    <p>
+                        <strong>Real Market Values:</strong><span class="ui-dial-icon-blue ui-icon-info" name="uxRMV" title="Click here for explanation.">131527</span>
+                    </p>
+                    <table class="dataTable">
+                        <tbody><tr>
+                            <td class="caption">
+                                Land
+                            </td>
+                            <td>
+                                $765,980
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="caption">
+                                Structures
+                            </td>
+                            <td>
+                                $333,180
+                            </td>
+                        </tr>
+                        <tr class="totals">
+                            <td class="caption">
+                                Total
+                            </td>
+                            <td>
+                                $1,099,160
+                            </td>
+                        </tr>
+                    </tbody></table>
+                    <p>
+                        <strong>Assessed Values:</strong>
+                    </p>
+                    <table class="dataTable">
+                        <tbody><tr>
+                            <td class="caption">
+                                Maximum Assessed <span class="ui-dial-icon-blue ui-icon-info" name="uxMAV" title="Click here for explanation.">131527</span>
+                            </td>
+                            <td>
+                                $481,920
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="caption">
+                                Assessed Value <span class="ui-dial-icon-blue ui-icon-info" name="uxAssdVal" title="Click here for explanation.">131527</span>
+                            </td>
+                            <td>
+                                $481,920
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="caption">
+                                Veterans Exemption <span class="ui-dial-icon-blue ui-icon-info" name="uxVetExc" title="Click here for explanation.">131527</span>
+                            </td>
+                            <td>
+                                
+                            </td>
+                        </tr>
+
+                    </tbody></table>
+
+
+            </div>
+        </div>
+        <!-- #results-data -->
+    </div>
+    <!-- #results-panel -->
+</div>
+<!-- #content-app-container -->
+
+
+
+
+
+
+
+
+
+    </div>
+    <div class="clearme">
+    </div>
+    <footer style="position: relative; visibility: visible;">
+        <div id="footer-app">
+            <p>
+                THE INFORMATION AND MAPS ACCESSED THROUGH THIS WEB SITE PROVIDE A VISUAL DISPLAY
+                FOR YOUR CONVENIENCE. EVERY REASONABLE EFFORT HAS BEEN MADE TO ASSURE THE ACCURACY
+                OF THE MAPS AND ASSOCIATED DATA. DESCHUTES COUNTY MAKES NO WARRANTY, REPRESENTATION
+                OR GUARANTEE AS TO THE CONTENT, SEQUENCE, ACCURACY, TIMELINESS OR COMPLETENESS OF
+                ANY OF THE DATA PROVIDED HEREIN. DESCHUTES COUNTY EXPLICITLY DISCLAIMS ANY REPRESENTATIONS
+                AND WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+                AND FITNESS FOR A PARTICULAR PURPOSE. DESCHUTES COUNTY SHALL ASSUME NO LIABILITY
+                FOR ANY ERRORS, OMISSIONS, OR INACCURACIES IN THE INFORMATION PROVIDED REGARDLESS
+                OF HOW CAUSED. DESCHUTES COUNTY ASSUMES NO LIABILITY FOR ANY DECISIONS MADE OR ACTIONS
+                TAKEN OR NOT TAKEN BY THE USER OF THIS INFORMATION OR DATA FURNISHED HEREUNDER.
+            </p>
+        </div>
+        <div id="copyright">
+            <p>
+                © 2025 - Deschutes County. All rights reserved. <span class="noPrint">
+                    <a href="http://www.deschutes.org/disclaimer" target="_blank">Disclaimer</a>
+                    | <a href="http://www.deschutes.org/privacy" target="_blank">
+                        Privacy
+                    </a> | <a href="http://www.deschutes.org/ada" target="_blank">
+                        Accessibility
+                    </a> | <a href="https://weblink.deschutes.org/Forms/contact?Contact_Purpose=Help%20with%20the%20DIAL/Property%20Research%20Website" target="_blank">
+                        Help/Feedback Form
+                    </a> |
+                    <a data-ajax="false" href="/Help/About" target="_blank">About Dial | </a>
+                    <a data-ajax="false" href="/Help/HowTo" target="_blank">Online Help | </a>
+                    <a data-ajax="false" href="/Help/WhatsNew" target="_blank">What's New</a>
+
+                </span>
+            </p>
+        </div>
+    </footer>
+    <script src="/bundles/globalJS?v=1lc8pzknlEbjL9OEYE1BNRH0SCqrjjURaAkSoqFY7lc1"></script>
+
+    <script src="//maps.googleapis.com/maps/api/js?key=AIzaSyD7eRfg3jzJDwci7MD-WpKKFGSF9d9rbOE&amp;v=3.exp"></script>
+<script src="/Assets/js/dojoConfig.js" type="text/javascript"></script><script src="//js.arcgis.com/3.35/"></script>
+<script src="/Assets/js/DCLocMap?v=14wq8TuUAgz_ITlyfCXfwZBGL9iZbqqLGRLouUT5W-Q1"></script>
+
+    
+
+    
+
+    <input type="hidden" value="WEBNLB-1">
+
+
+
+
+<div class="ui-dialog ui-widget ui-widget-content ui-corner-all ui-draggable ui-resizable" tabindex="-1" role="dialog" aria-labelledby="ui-id-1" style="display: none; outline: 0px; z-index: 1000; position: absolute;"><div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix"><span id="ui-id-1" class="ui-dialog-title">&nbsp;</span><a href="#" class="ui-dialog-titlebar-close ui-corner-all" role="button"><span class="ui-icon ui-icon-closethick">close</span></a></div><div id="dialog" class="ui-dialog-content ui-widget-content">
+        <p>
+            Loading...
+        </p>
+    </div><div class="ui-resizable-handle ui-resizable-n" style="z-index: 1000;"></div><div class="ui-resizable-handle ui-resizable-e" style="z-index: 1000;"></div><div class="ui-resizable-handle ui-resizable-s" style="z-index: 1000;"></div><div class="ui-resizable-handle ui-resizable-w" style="z-index: 1000;"></div><div class="ui-resizable-handle ui-resizable-se ui-icon ui-icon-gripsmall-diagonal-se ui-icon-grip-diagonal-se" style="z-index: 1000;"></div><div class="ui-resizable-handle ui-resizable-sw" style="z-index: 1000;"></div><div class="ui-resizable-handle ui-resizable-ne" style="z-index: 1000;"></div><div class="ui-resizable-handle ui-resizable-nw" style="z-index: 1000;"></div></div><div class="ui-dialog ui-widget ui-widget-content ui-corner-all ui-draggable" tabindex="-1" role="dialog" aria-labelledby="ui-id-2" style="display: none; outline: 0px; z-index: 1000;"><div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix"><span id="ui-id-2" class="ui-dialog-title">Overview Map</span><a href="#" class="ui-dialog-titlebar-close ui-corner-all" role="button"><span class="ui-icon ui-icon-closethick">close</span></a></div><div id="uxMap" style="padding: 0px;" class="ui-dialog-content ui-widget-content">
+
+    <div id="uxMapToolbar" style="z-index: 9998; opacity: 1;">
+        <div id="uxBasemap" class="map-button map-button-left ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-primary" role="button" aria-disabled="false"><span class="ui-button-icon-primary ui-icon map-basemaps-icon"></span><span class="ui-button-text">Basemap</span></div>
+        <a href="#" data-role="videotip" data-lookupname="videoMapTip" style="float:left; margin-top:2px; margin-left:5px"><div style="vertical-align:bottom" class="ui-icon-video ui-dial-icon-blue"></div>Video Help/Tips</a>
+        <div id="uxPrintMap" class="map-button map-button-right ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-primary" role="button" aria-disabled="false"><span class="ui-button-icon-primary ui-icon map-print-icon"></span><span class="ui-button-text">Print</span></div>
+    </div>
+
+    <div id="map" class="claro" style="width:750px; height:550px; border:1px solid #000;"></div>
+
+
+    <div id="uxBasemapTool" class="ui-dialog ui-widget ui-widget-content ui-corner-all mapToolsDialog">
+        <div class="ui-helper-clearfix mapToolsTitleBar">
+            <span class="ui-dialog-title">Select a basemap</span>
+            <div class="mapToolsCloseButton ui-button ui-widget ui-state-default ui-corner-all ui-button-icon-only" role="button" aria-disabled="false" title="close"><span class="ui-button-icon-primary ui-icon ui-icon-close"></span><span class="ui-button-text">close</span></div>
+        </div>
+        <div id="uxBasemapContent"></div>
+    </div>
+
+</div></div><div class="ui-dialog ui-widget ui-widget-content ui-corner-all ui-draggable" tabindex="-1" role="dialog" aria-labelledby="ui-id-3" style="display: none; outline: 0px; z-index: 1000;"><div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix"><span id="ui-id-3" class="ui-dialog-title">Map created...</span><a href="#" class="ui-dialog-titlebar-close ui-corner-all" role="button"><span class="ui-icon ui-icon-closethick">close</span></a></div><div id="uxMapPrepDialog" style="z-index: 999; top: 10px; display: block;" class="ui-dialog-content ui-widget-content">
+    <p>
+        Your map has been created.<br><a id="uxPrintUrl" href="" target="map">Download your map here.</a>
+    </p>
+</div></div><div class="ui-dialog ui-widget ui-widget-content ui-corner-all ui-draggable ui-resizable" tabindex="-1" role="dialog" aria-labelledby="ui-id-4" style="display: none; outline: 0px; z-index: 1000; position: absolute;"><div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix"><span id="ui-id-4" class="ui-dialog-title">Google Street View</span><a href="#" class="ui-dialog-titlebar-close ui-corner-all" role="button"><span class="ui-icon ui-icon-closethick">close</span></a></div><div id="uxStreetView" class="ui-dialog-content ui-widget-content">
+    <div id="map_canvas" style="width:100%;height:100%;"></div>
+</div><div class="ui-resizable-handle ui-resizable-n" style="z-index: 1000;"></div><div class="ui-resizable-handle ui-resizable-e" style="z-index: 1000;"></div><div class="ui-resizable-handle ui-resizable-s" style="z-index: 1000;"></div><div class="ui-resizable-handle ui-resizable-w" style="z-index: 1000;"></div><div class="ui-resizable-handle ui-resizable-se ui-icon ui-icon-gripsmall-diagonal-se ui-icon-grip-diagonal-se" style="z-index: 1000;"></div><div class="ui-resizable-handle ui-resizable-sw" style="z-index: 1000;"></div><div class="ui-resizable-handle ui-resizable-ne" style="z-index: 1000;"></div><div class="ui-resizable-handle ui-resizable-nw" style="z-index: 1000;"></div></div></body></html>
