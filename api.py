@@ -1,102 +1,239 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
-import asyncio
-from scrappers.utilityInformation import check_water_systems
-from scrappers.deschutesDIAL import main as deschutes_main
-from scrappers.designData import main as design_main
-from scrappers.googleEarth import main as google_earth_main
-from scrappers.planningData import main as planning_main
+import psycopg2
+from typing import List, Optional
+import os
+from dotenv import load_dotenv
 
-app = FastAPI(title="Property Data API", description="API for fetching property data from various sources")
+# Load environment variables
+load_dotenv()
 
-class PropertyRequest(BaseModel):
+# Database config
+DB_HOST = os.getenv("DB_HOST")
+DB_NAME = "sagedatabase"
+DB_USER = os.getenv("DB_USER")
+DB_PASS = os.getenv("DB_PASS")
+DB_PORT = os.getenv("DB_PORT")
+
+app = FastAPI(title="Sage Backend API", description="APIs to fetch property data from various tables")
+
+class BasicInfo(BaseModel):
+    id: str
+    owner_name: Optional[str]
+    owner_name_source: Optional[str]
+    mailing_address: Optional[str]
+    mailing_address_source: Optional[str]
+    parcel_number: Optional[str]
+    parcel_number_source: Optional[str]
+    acres: Optional[str]
+    acres_source: Optional[str]
+    plat_map: Optional[str]
+    plat_map_url: Optional[str]
+    tax_map: Optional[str]
+    tax_map_url: Optional[str]
+    account: Optional[str]
+    site_address: Optional[str]
+    site_address_source: Optional[str]
+    legal: Optional[str]
+    legal_source: Optional[str]
+
+class DesignData(BaseModel):
+    id: str
+    ground_snow_load: Optional[str]
+    ground_snow_load_source: Optional[str]
+    seismic_design_category: Optional[str]
+    seismic_design_category_source: Optional[str]
+    basic_wind_speed: Optional[str]
+    basic_wind_speed_source: Optional[str]
+    ultimate_wind_design_speed: Optional[str]
+    ultimate_wind_design_speed_source: Optional[str]
+    exposure: Optional[str]
+    exposure_source: Optional[str]
+    frost_depth: Optional[str]
+    frost_depth_source: Optional[str]
+
+class GoogleEarthInfo(BaseModel):
     property_id: str
-    address: str
-    taxlot_id: Optional[str] = None
+    gps_coord: Optional[str]
+    gps_coord_source: Optional[str]
+    slope: Optional[str]
+    slope_source: Optional[str]
+    power_visible: Optional[bool]
+    power_visible_source: Optional[str]
+    existing_structures: Optional[bool]
+    existing_structures_source: Optional[str]
+    trees_brush: Optional[bool]
+    trees_brush_source: Optional[str]
 
-class PropertyResponse(BaseModel):
-    basic_info: Dict[str, Any]
-    utility_info: Dict[str, Any]
-    design_data: Dict[str, Any]
-    google_earth_data: Dict[str, Any]
-    planning_data: Dict[str, Any]
+class PlanningData(BaseModel):
+    property_id: str
+    jurisdiction: Optional[str]
+    fire_district: Optional[str]
+    fire_district_source: Optional[str]
+    zoning: Optional[str]
+    overlay: Optional[str]
+    max_lot_coverage: Optional[str]
+    max_building_height: Optional[str]
+    front_setback: Optional[str]
+    side_setback: Optional[str]
+    rear_setback: Optional[str]
+    solar_setback: Optional[str]
+    special_setback: Optional[str]
+    easements: Optional[str]
+    easements_source: Optional[str]
+    liquefaction_hazard: Optional[str]
+    landslide_hazard: Optional[str]
+    geo_report_required: Optional[str]
+    fema_flood_zone: Optional[str]
+    hydric_soils_hazard: Optional[str]
+    wetlands_on_property: Optional[str]
+    erosion_control_required: Optional[str]
+    stormwater_requirements: Optional[str]
+    tree_preservation_reqs: Optional[str]
+    special_fire_marshal_reqs: Optional[str]
+    radon: Optional[str]
+    sidewalks_required: Optional[str]
+    approach_permit: Optional[str]
 
-@app.post("/property-data", response_model=PropertyResponse)
-async def get_property_data(request: PropertyRequest):
+class UtilityDetails(BaseModel):
+    id: str
+    waste_water_type: Optional[str]
+    waste_water_type_source: Optional[str]
+    water_type: Optional[str]
+    water_type_source: Optional[str]
+    power_type: Optional[str]
+    power_type_source: Optional[str]
+    created_at: Optional[str]
+
+def get_db_connection():
+    return psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS,
+        port=DB_PORT
+    )
+
+@app.get("/basic-info/{property_id}", response_model=BasicInfo)
+async def get_basic_info(property_id: str):
     try:
-        # Run all scrapers concurrently
-        tasks = [
-            asyncio.create_task(run_utility_info(request.property_id)),
-            asyncio.create_task(run_deschutes_dial(request.property_id, request.taxlot_id)),
-            asyncio.create_task(run_design_data(request.address)),
-            asyncio.create_task(run_google_earth(request.address, request.property_id)),
-            asyncio.create_task(run_planning_data(request.property_id, request.address))
-        ]
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM basic_info WHERE id = %s", (property_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Basic info not found")
         
-        # Wait for all tasks to complete
-        results = await asyncio.gather(*tasks)
-        
-        # Extract results
-        utility_info, deschutes_data, design_data, google_earth_data, planning_data = results
-        
-        return PropertyResponse(
-            basic_info=deschutes_data,
-            utility_info=utility_info,
-            design_data=design_data,
-            google_earth_data=google_earth_data,
-            planning_data=planning_data
-        )
-    
+        columns = [desc[0] for desc in cursor.description]
+        data = dict(zip(columns, row))
+        return BasicInfo(**data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            cursor.close()
+            conn.close()
 
-async def run_utility_info(property_id: str) -> Dict[str, Any]:
+@app.get("/design-data/{property_id}", response_model=DesignData)
+async def get_design_data(property_id: str):
     try:
-        septic_result, well_result, power_type = check_water_systems(property_id)
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM design_data WHERE id = %s", (property_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Design data not found")
+        
+        columns = [desc[0] for desc in cursor.description]
+        data = dict(zip(columns, row))
+        return DesignData(**data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            cursor.close()
+            conn.close()
+
+@app.get("/google-earth-info/{property_id}", response_model=GoogleEarthInfo)
+async def get_google_earth_info(property_id: str):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM google_earth_info WHERE property_id = %s", (property_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Google Earth info not found")
+        
+        columns = [desc[0] for desc in cursor.description]
+        data = dict(zip(columns, row))
+        return GoogleEarthInfo(**data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            cursor.close()
+            conn.close()
+
+@app.get("/planning-data/{property_id}", response_model=PlanningData)
+async def get_planning_data(property_id: str):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM planning_data WHERE property_id = %s", (property_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Planning data not found")
+        
+        columns = [desc[0] for desc in cursor.description]
+        data = dict(zip(columns, row))
+        return PlanningData(**data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            cursor.close()
+            conn.close()
+
+@app.get("/utility-details/{property_id}", response_model=UtilityDetails)
+async def get_utility_details(property_id: str):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM utility_details WHERE id = %s", (property_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Utility details not found")
+        
+        columns = [desc[0] for desc in cursor.description]
+        data = dict(zip(columns, row))
+        return UtilityDetails(**data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            cursor.close()
+            conn.close()
+
+@app.get("/all-data/{property_id}")
+async def get_all_data(property_id: str):
+    try:
+        basic_info = await get_basic_info(property_id)
+        design_data = await get_design_data(property_id)
+        google_earth_info = await get_google_earth_info(property_id)
+        planning_data = await get_planning_data(property_id)
+        utility_details = await get_utility_details(property_id)
+        
         return {
-            "septic_status": septic_result,
-            "well_status": well_result,
-            "power_type": power_type
+            "basic_info": basic_info,
+            "design_data": design_data,
+            "google_earth_info": google_earth_info,
+            "planning_data": planning_data,
+            "utility_details": utility_details
         }
+    except HTTPException as e:
+        raise e
     except Exception as e:
-        print(f"Error in utility info: {e}")
-        return {}
-
-async def run_deschutes_dial(property_id: str, taxlot_id: Optional[str] = None) -> Dict[str, Any]:
-    try:
-        if taxlot_id:
-            result = deschutes_main(taxlot_id=taxlot_id)
-        else:
-            result = deschutes_main(property_id=property_id)
-        return result
-    except Exception as e:
-        print(f"Error in Deschutes DIAL: {e}")
-        return {}
-
-async def run_design_data(address: str) -> Dict[str, Any]:
-    try:
-        result = design_main()
-        return result
-    except Exception as e:
-        print(f"Error in design data: {e}")
-        return {}
-
-async def run_google_earth(address: str, property_id: str) -> Dict[str, Any]:
-    try:
-        result = google_earth_main()
-        return result
-    except Exception as e:
-        print(f"Error in Google Earth data: {e}")
-        return {}
-
-async def run_planning_data(property_id: str, address: str) -> Dict[str, Any]:
-    try:
-        result = planning_main()
-        return result
-    except Exception as e:
-        print(f"Error in planning data: {e}")
-        return {}
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

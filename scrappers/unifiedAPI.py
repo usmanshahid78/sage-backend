@@ -18,8 +18,12 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 import openai
 import PyPDF2
+import geopandas as gpd
+from geopy.geocoders import Nominatim
+from shapely.geometry import Point
 
 # Load environment variables
 load_dotenv()
@@ -81,6 +85,33 @@ def fetch_plat_map_url(property_id, html_content=None):
     if plat_map_link:
         return plat_map_link["href"], url
     return None, url
+
+def extract_easement_info(dev_summary_content, dev_summary_url):
+    """Extract easement-related information from development summary."""
+    try:
+        if not dev_summary_content:
+            print("⚠️ No development summary content provided")
+            return None, None
+
+        soup = BeautifulSoup(dev_summary_content, "html.parser")
+        full_text = soup.get_text(separator="\n").lower()
+
+        # Search for key easement-related phrases
+        if "easement" in full_text:
+            matches = re.findall(r'.{0,100}easement.{0,100}', full_text)
+            if matches:
+                cleaned = " | ".join(set(match.strip().capitalize() for match in matches))
+                print(f"\n🔍 Found easement matches: {cleaned}")
+                return cleaned, dev_summary_url
+            else:
+                print("⚠️ Found 'easement' in text but no matches extracted")
+                return None, None
+
+        print("⚠️ No easement information found in development summary")
+        return None, None
+    except Exception as e:
+        print(f"❌ Easement parsing error: {e}")
+        return None, None
 
 def extract_html_data(html_content, dev_summary_content=None, main_url=None, dev_summary_url=None):
     soup = BeautifulSoup(html_content, "html.parser")
@@ -166,6 +197,15 @@ def extract_html_data(html_content, dev_summary_content=None, main_url=None, dev
             if legal_parts:
                 data["legal"] = " ".join(legal_parts)
                 data["legal_source"] = dev_summary_url
+
+        # Extract easement information using the new function
+        easements, easements_source = extract_easement_info(dev_summary_content, dev_summary_url)
+        if easements:
+            data["easements"] = easements
+            data["easements_source"] = easements_source
+            print(f"📝 Stored easement data: {data['easements']}")
+            print(f"🔗 Source URL: {data['easements_source']}")
+
     return data
 
 def fetch_arcgis_data(map_and_taxlot):
@@ -395,20 +435,220 @@ def detect_trees(lat, lon):
         return bool(green_percentage > 5), map_url  # Return boolean and source URL
     return None, None
 
-def detect_buildings(lat, lon):
-    map_url = f"https://maps.googleapis.com/maps/api/staticmap?center={lat},{lon}&zoom=18&size=600x400&maptype=satellite&key={GOOGLE_API_KEY}"
-    response = requests.get(map_url)
-    
-    if response.status_code == 200:
-        img_pil = Image.open(BytesIO(response.content))
-        img_cv = np.array(img_pil)
-        img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2BGR)
-        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
-        edges = cv2.Canny(gray, 50, 150)
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        building_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 1000]
-        return bool(len(building_contours) > 2), map_url  # Return boolean and source URL
-    return None, None
+def analyze_permits_for_structures(property_id):
+    """
+    Analyze DIAL permits to determine if structures exist on the property.
+    Returns a dictionary with structure status and supporting permit information.
+    """
+    try:
+        url = f"https://dial.deschutes.org/Real/Permits/{property_id}"
+        response = requests.get(url)
+        if response.status_code != 200:
+            print(f"❌ Failed to fetch permits for property {property_id}")
+            return None, url
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+        permit_table = soup.find('table', {'class': 'infoTable'})
+        
+        if not permit_table:
+            print("No permit table found")
+            return {
+                "has_structure": False,
+                "structure_status": "none",
+                "supporting_permits": []
+            }, url
+
+        # Define construction-related permit types
+        construction_permits = {
+            'Building', 'Electrical', 'Mechanical', 'Plumbing', 
+            'Septic', 'Manufactured Structure'
+        }
+
+        # Track relevant permits
+        supporting_permits = []
+        has_finaled_construction = False
+        has_active_construction = False
+        has_recent_utility = False
+
+        # Process each permit row
+        for row in permit_table.find_all('tr')[1:]:  # Skip header row
+            cells = row.find_all('td')
+            if len(cells) >= 3:
+                permit_type = cells[1].text.strip()
+                status = cells[2].text.strip()
+                date = cells[0].text.strip()
+
+                # Store permit info
+                permit_info = {
+                    "type": permit_type,
+                    "status": status,
+                    "date": date
+                }
+
+                if permit_type in construction_permits:
+                    supporting_permits.append(permit_info)
+                    
+                    if status.lower() in ['finaled', 'final']:
+                        has_finaled_construction = True
+                    elif status.lower() in ['permit issued', 'active', 'in progress']:
+                        has_active_construction = True
+                    
+                    # Check for recent utility permits
+                    if permit_type in ['Electrical', 'Septic', 'Plumbing']:
+                        try:
+                            permit_date = datetime.strptime(date, '%m/%d/%Y')
+                            if (datetime.now() - permit_date).days < 365:  # Within last year
+                                has_recent_utility = True
+                        except:
+                            pass
+
+        # Determine structure status
+        if has_finaled_construction:
+            structure_status = {
+                "has_structure": True,
+                "structure_status": "confirmed",
+                "supporting_permits": supporting_permits
+            }
+        elif has_active_construction or has_recent_utility:
+            structure_status = {
+                "has_structure": True,
+                "structure_status": "in_progress",
+                "supporting_permits": supporting_permits
+            }
+        else:
+            structure_status = {
+                "has_structure": False,
+                "structure_status": "none",
+                "supporting_permits": supporting_permits
+            }
+
+        print(f"\nDebug - Permit Analysis Results:")
+        print(f"- Structure Status: {structure_status['structure_status']}")
+        print(f"- Has Structure: {structure_status['has_structure']}")
+        print(f"- Supporting Permits: {len(structure_status['supporting_permits'])}")
+        
+        return structure_status, url
+
+    except Exception as e:
+        print(f"❌ Error analyzing permits: {e}")
+        return None, url
+
+def detect_buildings(lat, lon, property_id=None):
+    """
+    Enhanced building detection that strictly prioritizes permit analysis.
+    Only uses satellite imagery if no property_id is provided.
+    """
+    try:
+        # Step 1: Always try permit analysis first if property_id is available
+        if property_id:
+            print(f"\n🔍 Checking permits for property ID: {property_id}")
+            permit_result, permit_url = analyze_permits_for_structures(property_id)
+            
+            if permit_result:
+                print(f"✅ Permit analysis complete")
+                print(f"- Status: {permit_result['structure_status']}")
+                print(f"- Supporting permits: {len(permit_result['supporting_permits'])}")
+                
+                # Return based on permit analysis only
+                has_buildings = permit_result["structure_status"] in ["confirmed", "in_progress"]
+                print(f"{'✅' if has_buildings else '❌'} Final decision based on permits: {permit_result['structure_status']}")
+                return has_buildings, permit_url
+            
+            print("⚠️ No permit data available")
+            return False, permit_url if permit_url else None
+
+        # Step 2: Only use satellite imagery if no property_id provided
+        print(f"\n🛰️ No property ID available, using satellite imagery...")
+        map_url = f"https://maps.googleapis.com/maps/api/staticmap?center={lat},{lon}&zoom=19&size=800x600&maptype=satellite&key={GOOGLE_API_KEY}"
+        print(f"Debug - Fetching satellite image from: {map_url}")
+        response = requests.get(map_url)
+        
+        if response.status_code == 200:
+            img_pil = Image.open(BytesIO(response.content))
+            img_cv = np.array(img_pil)
+            img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2BGR)
+            
+            # Create a copy for visualization
+            debug_img = img_cv.copy()
+            
+            # Convert to grayscale
+            gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+            
+            # Apply bilateral filter to reduce noise while preserving edges
+            gray = cv2.bilateralFilter(gray, 9, 75, 75)
+            
+            # Use adaptive thresholding to handle varying lighting conditions
+            binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+            
+            # Morphological operations to clean up the binary image
+            kernel = np.ones((3,3), np.uint8)
+            binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+            binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
+            
+            # Find contours
+            contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            # Filter and analyze contours
+            building_contours = []
+            min_area = 400  # Minimum area in pixels
+            max_area = img_cv.shape[0] * img_cv.shape[1] * 0.3  # Maximum 30% of image
+            
+            for cnt in contours:
+                area = cv2.contourArea(cnt)
+                if min_area < area < max_area:
+                    # Get the minimum area rectangle
+                    rect = cv2.minAreaRect(cnt)
+                    box = cv2.boxPoints(rect)
+                    box = np.int0(box)
+                    
+                    # Calculate rectangle properties
+                    width = min(rect[1])
+                    height = max(rect[1])
+                    aspect_ratio = height / width if width > 0 else 0
+                    
+                    # Calculate how rectangular the shape is
+                    rect_area = width * height
+                    extent = area / rect_area if rect_area > 0 else 0
+                    
+                    # Calculate solidity (area vs convex hull area)
+                    hull = cv2.convexHull(cnt)
+                    hull_area = cv2.contourArea(hull)
+                    solidity = area / hull_area if hull_area > 0 else 0
+                    
+                    # Strict criteria for building shapes
+                    if (0.4 < aspect_ratio < 3.0 and  # Not too elongated
+                        extent > 0.65 and            # Fairly rectangular
+                        solidity > 0.8):            # Solid shape
+                        
+                        # Draw on debug image
+                        cv2.drawContours(debug_img, [box], 0, (0, 255, 0), 2)
+                        building_contours.append(cnt)
+                        
+                        # Add shape metrics to debug output
+                        M = cv2.moments(cnt)
+                        if M["m00"] != 0:
+                            cx = int(M["m10"] / M["m00"])
+                            cy = int(M["m01"] / M["m00"])
+                            metrics_text = f"AR:{aspect_ratio:.2f} E:{extent:.2f}"
+                            cv2.putText(debug_img, metrics_text, (cx-40, cy), 
+                                      cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            
+            # Save debug image
+            debug_path = f"debug_buildings_{property_id if property_id else ''}_{lat}_{lon}.jpg"
+            cv2.imwrite(debug_path, debug_img)
+            print(f"Debug image saved to: {debug_path}")
+            
+            # Only return satellite results if no property_id was provided
+            satellite_has_buildings = len(building_contours) > 0
+            print(f"\n🛰️ Satellite Analysis Results:")
+            print(f"- Detected Shapes: {len(building_contours)}")
+            print(f"{'✅' if satellite_has_buildings else '❌'} Final decision based on satellite: {'Buildings detected' if satellite_has_buildings else 'No buildings detected'}")
+            return satellite_has_buildings, map_url
+        
+        return False, None
+    except Exception as e:
+        print(f"❌ Building detection error: {e}")
+        return False, None
 
 def detect_power_infrastructure(lat, lon, property_id):
     # Fetch Street View image
@@ -528,32 +768,38 @@ def get_jurisdiction_from_dial(property_id: int) -> str:
         print(f"Error fetching jurisdiction: {e}")
         return "Unknown"
 
-def get_fire_district_from_dial(address: str) -> str:
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
-    driver = webdriver.Chrome(options=options)
+def get_fire_district(property_id):
+    """Fetch fire district from DIAL Service Providers page."""
+    url = f"https://dial.deschutes.org/Real/ServiceProviders/{property_id}/"
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
     try:
-        driver.get("https://dial.deschutes.org/Real/InteractiveMap")
-        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "searchText"))).send_keys(address + "\n")
-        time.sleep(5)
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
 
-        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Layers')]"))).click()
-        time.sleep(1)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        table = soup.find('table', id='reportTable')
+        if not table:
+            print(f"❌ No report table found for property {property_id}")
+            print(f"🔥 DEBUG - Fire district HTML table:\n{table.prettify() if table else 'No table found'}")
+            return "NO DISTRICT", url
 
-        checkbox = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//label[contains(text(), 'Fire')]/preceding-sibling::input"))
-        )
-        if not checkbox.is_selected():
-            checkbox.click()
-            time.sleep(3)
+        for row in table.find_all('tr'):
+            cols = row.find_all('td')
+            if len(cols) >= 2 and 'fire district' in cols[0].get_text(strip=True).lower():
+                district = cols[1].text.strip()
+                print(f"✅ Found fire district: {district}")
+                return district, url
 
-        fire_text = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "infoPanel"))).text
-        return fire_text if "Fire" in fire_text else "NO DISTRICT"
+        print(f"❌ No fire district found for property {property_id}")
+        print(f"🔥 DEBUG - Fire district HTML table:\n{table.prettify() if table else 'No table found'}")
+        return "NO DISTRICT", url
+
     except Exception as e:
-        print(f"Error getting fire district: {e}")
-        return "NO DISTRICT"
-    finally:
-        driver.quit()
+        print(f"❌ Error fetching fire district: {e}")
+        return "NO DISTRICT", url
 
 def get_zoning_and_overlay_from_dial(property_id: int) -> dict:
     url = f"https://dial.deschutes.org/Real/DevelopmentSummary/{property_id}"
@@ -574,23 +820,69 @@ def get_zoning_and_overlay_from_dial(property_id: int) -> dict:
         print(f"Error extracting zoning/overlay: {e}")
         return {"zoning": None, "overlay": None}
 
-def analyze_setbacks_and_restrictions() -> dict:
-    prompt = '''Please analyze this zoning code for a Multiple Ag Use Zoned property located at 64350 Sisemore Road Bend Oregon 97703. Determine and report the setback for: Front, Garage, Side and Rear. Examine the broader Deschutes County Code for lot coverage and building height requirements that may apply to this code. Also determine if there are solar setbacks that may be applicable to this property.
-https://deschutescounty.municipalcodeonline.com/book?type=ordinances#name=CHAPTER_18.32_MULTIPLE_USE_AGRICULTURAL_ZONE;_MUA
-Due to being rural and gravel, my assumption is that Sisemore Rd is a local street.
-The property is bordered by a Riverine R4SBCx irrigation canal from the National Wetlands Inventory. Do you expect any special setbacks from this canal based on the information above?
-Also analyze solar setbacks from this code:
-https://deschutescounty.municipalcodeonline.com/book/print?type=ordinances&name=18.116.180_Building_Setbacks_For_The_Protection_Of_Solar_Access'''
+def analyze_setbacks_and_restrictions(zoning: str, address: str) -> dict:
+    prompt = f'''
+    The zoning code for the property located at {address} in Deschutes County is {zoning}.
+
+    Using this zoning code, determine the required setbacks for:
+    - Front
+    - Side
+    - Rear
+    - Solar
+    - Special (e.g., from canals, wetlands, or roads per DCC 18.88)
+
+    Also include max lot coverage and max building height.
+
+    Use these code references:
+    - RR10: https://deschutescounty.municipalcodeonline.com/book?type=ordinances#name=CHAPTER_18.60_RURAL_RESIDENTIAL_ZONE
+    - Wildlife Overlay: https://deschutescounty.municipalcodeonline.com/book?type=ordinances#name=CHAPTER_18.88_WILDLIFE_AREA_COMBINING_ZONE
+    - Solar Setback: https://deschutescounty.municipalcodeonline.com/book?type=ordinances#name=18.116.180_Building_Setbacks_For_The_Protection_Of_Solar_Access
+    - Setback exceptions: https://deschutescounty.municipalcodeonline.com/book?type=ordinances#name=CHAPTER_18.120_Exceptions
+
+    Assume the property is rural and that any road is a local street.
+    Respond in structured form as:
+    Front Setback: ...
+    Side Setback: ...
+    Rear Setback: ...
+    Solar Setback: ...
+    Special Setback: ...
+    Max Lot Coverage: ...
+    Max Building Height: ...
+    '''
     try:
         result = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "system", "content": "Extract exact values only, no commentary."},
                       {"role": "user", "content": prompt}]
         )
-        return parse_structured_gpt_output(result["choices"][0]["message"]["content"])
+        gpt_response = result["choices"][0]["message"]["content"]
+        print(f"\nGPT Response for {address} ({zoning}):")
+        print(gpt_response)
+        
+        data = parse_structured_gpt_output(gpt_response)
+        
+        # Override max lot coverage and max building height with fixed values
+        data["max_lot_coverage"] = "30%"
+        data["max_building_height"] = "30 ft"
+        # Hardcode front setback to 20 ft
+        data["front_setback"] = "20 ft"
+        # Add address to the data
+        data["address"] = address
+        
+        return data
     except Exception as e:
         print(f"Error from OpenAI: {e}")
-        return {}
+        # Return default values even if OpenAI fails
+        return {
+            "address": address,
+            "max_lot_coverage": "30%",
+            "max_building_height": "30 ft",
+            "front_setback": "20 ft",  # Hardcoded front setback
+            "side_setback": None,
+            "rear_setback": None,
+            "solar_setback": None,
+            "special_setback": None
+        }
 
 def parse_structured_gpt_output(text: str) -> dict:
     result = {
@@ -602,48 +894,117 @@ def parse_structured_gpt_output(text: str) -> dict:
         "solar_setback": None,
         "special_setback": None
     }
+
     for line in text.splitlines():
+        line = line.strip()
         lower_line = line.lower()
+
         for key in result:
-            if key.replace("_", " ") in lower_line:
+            # Match field name
+            label = key.replace("_", " ")
+            if label in lower_line:
                 parts = line.split(":")
                 if len(parts) > 1:
                     value = parts[1].strip()
-                    if key == "solar_setback":
-                        result[key] = "YES" if "yes" in value.lower() else "NO"
-                    elif key == "special_setback":
-                        feet_match = [s for s in value.split() if s.isdigit() or "ft" in s or "feet" in s]
-                        result[key] = " ".join(feet_match) if feet_match else value
+
+                    if not value or value.lower() in ["not specified", "none", "no"]:
+                        result[key] = "None" if "solar" in key else "Not specified"
                     else:
                         result[key] = value
     return result
 
 def get_liquefaction_hazard(address: str) -> str:
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
-    driver = webdriver.Chrome(options=options)
+    """
+    Get liquefaction hazard level for a given address using DOGAMI shapefiles.
+    Uses ArcGIS geocoder instead of Nominatim for better rural coverage.
+    """
     try:
-        driver.get("https://dial.deschutes.org/Real/InteractiveMap")
-        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "searchText"))).send_keys(address + "\n")
-        time.sleep(5)
-        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Layers')]"))).click()
-        time.sleep(1)
+        print(f"\n🔍 Starting liquefaction hazard check for address: {address}")
+        
+        # Geocode using ArcGIS API
+        print("📍 Geocoding address using ArcGIS...")
+        try:
+            geo_url = create_geocode_url(address)
+            print(f"🔗 Geocoding URL: {geo_url}")
+            x, y, geo_source = get_coordinates(geo_url)
+            print(f"✅ Web Mercator coordinates: x={x}, y={y}")
+            lat, lon = convert_web_mercator_to_wgs84(x, y)
+            print(f"✅ WGS84 coordinates: lat={lat}, lon={lon}")
+            point = Point(lon, lat)
+            print(f"✅ Created point geometry: {point}")
+        except Exception as e:
+            print(f"❌ Geocoding failed: {e}")
+            print("Debug info:")
+            print(f"- Geocoding URL: {geo_url}")
+            print(f"- Error type: {type(e).__name__}")
+            return "UNKNOWN"
 
-        checkbox = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//label[contains(text(), 'Earthquake Hazard')]/preceding-sibling::input")))
-        if not checkbox.is_selected():
-            checkbox.click()
-            time.sleep(3)
+        # Load shapefiles
+        print("\n📂 Loading shapefiles...")
+        try:
+            print("Loading DOGAMI liquefaction data...")
+            liq = gpd.read_file("data/Liquefaction_Susceptibility.shp")
+            print(f"✅ Loaded {len(liq)} liquefaction polygons")
+            print(f"CRS: {liq.crs}")
+            print(f"Bounds: {liq.total_bounds}")
+            
+            print("\nLoading Deschutes County taxlots...")
+            parcels = gpd.read_file("data/Deschutes_Taxlots.shp")
+            print(f"✅ Loaded {len(parcels)} taxlots")
+            print(f"CRS: {parcels.crs}")
+            print(f"Bounds: {parcels.total_bounds}")
+        except Exception as e:
+            print(f"❌ Error loading shapefiles: {e}")
+            print("Debug info:")
+            print(f"- Current working directory: {os.getcwd()}")
+            print(f"- Data directory exists: {os.path.exists('data')}")
+            print(f"- Liquefaction file exists: {os.path.exists('data/Liquefaction_Susceptibility.shp')}")
+            print(f"- Taxlots file exists: {os.path.exists('data/Deschutes_Taxlots.shp')}")
+            return "UNKNOWN"
 
-        info = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "infoPanel"))).text
-        if "High" in info: return "HIGH"
-        if "Moderate" in info: return "MODERATE"
-        if "Low" in info: return "LOW"
-        return "MODERATE"
+        # Match CRS
+        print("\n🔄 Ensuring consistent CRS...")
+        liq = liq.to_crs(parcels.crs)
+        print(f"✅ Converted liquefaction data to CRS: {liq.crs}")
+
+        # Create GeoDataFrame for point
+        print("\n📍 Creating point GeoDataFrame...")
+        point_gdf = gpd.GeoDataFrame(geometry=[point], crs=parcels.crs)
+        print("✅ Created point GeoDataFrame")
+
+        # Spatial join
+        print("\n🔍 Performing spatial join with liquefaction data...")
+        joined = gpd.sjoin(point_gdf, liq, how="left", predicate="intersects")
+        print(f"✅ Spatial join complete. Found {len(joined)} matches")
+
+        if joined.empty:
+            print("⚠️ No matching liquefaction zone found.")
+            print("Debug info:")
+            print(f"- Point coordinates: {point}")
+            print(f"- Liquefaction polygons bounds: {liq.total_bounds}")
+            print(f"- Number of liquefaction polygons: {len(liq)}")
+            return "UNKNOWN"
+
+        # Get hazard value
+        hazard_level = joined.iloc[0].get('Liquefaction', '').strip().upper()
+        print(f"\n📊 Hazard level found: {hazard_level}")
+        
+        if hazard_level in ['HIGH', 'MODERATE', 'LOW']:
+            print(f"✅ Valid hazard level: {hazard_level}")
+            return hazard_level
+        else:
+            print(f"⚠️ Unknown liquefaction value: {hazard_level}")
+            print("Debug info:")
+            print(f"- Available columns: {joined.columns.tolist()}")
+            print(f"- First row data: {joined.iloc[0].to_dict()}")
+            return "UNKNOWN"
+
     except Exception as e:
-        print(f"Error getting liquefaction hazard: {e}")
-        return "MODERATE"
-    finally:
-        driver.quit()
+        print(f"\n❌ Error in liquefaction check: {e}")
+        print("Stack trace:")
+        import traceback
+        print(traceback.format_exc())
+        return "UNKNOWN"
 
 def get_landslide_hazard(address: str) -> str:
     options = webdriver.ChromeOptions()
@@ -703,39 +1064,127 @@ Respond with only one of these: YES, NO, or MORE INFO NEEDED.
         print(f"Error evaluating geo report: {e}")
         return "MORE INFO NEEDED"
 
-def get_hardcoded_values() -> dict:
-    return {
-        "fema_flood_zone": "NO",
-        "hydric_soils_hazard": "NO",
-        "wetlands_on_property": "YES",
-        "erosion_control_required": "None",
-        "stormwater_requirements": "None",
-        "tree_preservation_reqs": "None",
-        "special_fire_marshal_reqs": "YES",
-        "radon": "NO",
-        "sidewalks_required": "None",
-        "approach_permit": "NO"
-    }
+def get_erosion_control_required(slope: float) -> str:
+    """
+    Determine if erosion control is required based on slope percentage.
+    
+    Args:
+        slope (float): Slope percentage value
+        
+    Returns:
+        str: "YES" if slope > 15%, "MAYBE" if slope > 5%, "NO" if slope <= 5%, "UNKNOWN" if slope is None
+    """
+    try:
+        print(f"\n🔍 Checking erosion control requirements for slope: {slope}%")
+        
+        if slope is None:
+            print("⚠️ Slope value is None")
+            return "UNKNOWN"
+            
+        if slope > 15:
+            print("✅ Erosion control required (slope > 15%)")
+            return "YES"
+        elif slope > 5:
+            print("⚠️ Erosion control may be required (slope > 5%)")
+            return "MAYBE"
+        else:
+            print("✅ No erosion control required (slope ≤ 5%)")
+            return "NO"
+            
+    except Exception as e:
+        print(f"❌ Error determining erosion control requirements: {e}")
+        print("Stack trace:")
+        import traceback
+        print(traceback.format_exc())
+        return "UNKNOWN"
 
-def save_planning_data(property_id, jurisdiction, fire_district, zoning_overlay, planning_data,
+def get_approach_permit_required(address: str) -> str:
+    """
+    Determine if an approach permit is required based on address pattern.
+    
+    Args:
+        address (str): Property address
+        
+    Returns:
+        str: "YES" if address matches road pattern, "UNKNOWN" otherwise
+    """
+    try:
+        print(f"\n🔍 Checking approach permit requirements for address: {address}")
+        
+        # Common road type patterns
+        road_patterns = r'\d+ [A-Za-z ]+(Ave|Rd|Drive|St|Ln|Way|Highway|Blvd|Court|Cir|Loop|Terrace)'
+        
+        if re.search(road_patterns, address):
+            print("✅ Approach permit required (address matches road pattern)")
+            return "YES"
+        else:
+            print("⚠️ Approach permit requirement unknown (address pattern not recognized)")
+            return "UNKNOWN"
+            
+    except Exception as e:
+        print(f"❌ Error determining approach permit requirements: {e}")
+        print("Stack trace:")
+        import traceback
+        print(traceback.format_exc())
+        return "UNKNOWN"
+
+def get_hardcoded_values() -> dict:
+    """
+    Get hardcoded values for various property attributes.
+    """
+    try:
+        print("\n🔍 Getting hardcoded values...")
+        
+        hardcoded = {
+            "fema_flood_zone": "NO",
+            "hydric_soils_hazard": "NO",
+            "wetlands_on_property": "YES",
+            "erosion_control_required": "UNKNOWN",  # Will be updated based on slope
+            "stormwater_requirements": "None",
+            "tree_preservation_reqs": "None",
+            "special_fire_marshal_reqs": "YES",
+            "radon": "NO",
+            "sidewalks_required": "None",
+            "approach_permit": "UNKNOWN"  # Will be updated based on address
+        }
+        
+        print("✅ Retrieved hardcoded values")
+        return hardcoded
+        
+    except Exception as e:
+        print(f"❌ Error getting hardcoded values: {e}")
+        print("Stack trace:")
+        import traceback
+        print(traceback.format_exc())
+        return {}
+
+def save_planning_data(property_id, jurisdiction, fire_district, fire_district_source, zoning_overlay, planning_data,
                        liquefaction, landslide, geo_report_required, hardcoded_values):
     try:
+        print(f"\n💾 Saving planning data for address: {planning_data['address']}")
+        print(f"   Easements: {planning_data.get('easements', 'None')}")
+        print(f"   Easements Source: {planning_data.get('easements_source', 'None')}")
+
         conn = psycopg2.connect(
             dbname=DB_NAME, user=DB_USER, password=DB_PASS,
             host=DB_HOST, port=DB_PORT
         )
         cursor = conn.cursor()
         
-        # First check if record exists
-        cursor.execute("SELECT property_id FROM planning_data WHERE property_id = %s", (property_id,))
-        exists = cursor.fetchone() is not None
-        
-        if exists:
-            # Update existing record
+        # Check if record exists
+        cursor.execute("""
+            SELECT property_id FROM planning_data 
+            WHERE property_id = %(property_id)s
+        """, {"property_id": property_id})
+        existing_record = cursor.fetchone()
+
+        if existing_record:
+            print("📝 Updating existing record")
             query = """
             UPDATE planning_data SET
                 jurisdiction = %(jurisdiction)s,
                 fire_district = %(fire_district)s,
+                fire_district_source = %(fire_district_source)s,
                 zoning = %(zoning)s,
                 overlay = %(overlay)s,
                 max_lot_coverage = %(max_lot_coverage)s,
@@ -745,6 +1194,8 @@ def save_planning_data(property_id, jurisdiction, fire_district, zoning_overlay,
                 rear_setback = %(rear_setback)s,
                 solar_setback = %(solar_setback)s,
                 special_setback = %(special_setback)s,
+                easements = %(easements)s,
+                easements_source = %(easements_source)s,
                 liquefaction_hazard = %(liquefaction_hazard)s,
                 landslide_hazard = %(landslide_hazard)s,
                 geo_report_required = %(geo_report_required)s,
@@ -761,20 +1212,26 @@ def save_planning_data(property_id, jurisdiction, fire_district, zoning_overlay,
             WHERE property_id = %(property_id)s;
             """
         else:
-            # Insert new record
+            print("📝 Inserting new record")
             query = """
             INSERT INTO planning_data (
-                property_id, jurisdiction, fire_district, zoning, overlay,
+                property_id, jurisdiction, fire_district, fire_district_source, zoning, overlay,
                 max_lot_coverage, max_building_height, front_setback, side_setback, rear_setback, 
-                solar_setback, special_setback, liquefaction_hazard, landslide_hazard, geo_report_required,
-                fema_flood_zone, hydric_soils_hazard, wetlands_on_property, erosion_control_required, 
-                stormwater_requirements, tree_preservation_reqs, special_fire_marshal_reqs, radon, sidewalks_required, approach_permit
+                solar_setback, special_setback, easements, easements_source, liquefaction_hazard, 
+                landslide_hazard, geo_report_required, fema_flood_zone, hydric_soils_hazard, 
+                wetlands_on_property, erosion_control_required, stormwater_requirements, 
+                tree_preservation_reqs, special_fire_marshal_reqs, radon, sidewalks_required, 
+                approach_permit
             ) VALUES (
-                %(property_id)s, %(jurisdiction)s, %(fire_district)s, %(zoning)s, %(overlay)s,
-                %(max_lot_coverage)s, %(max_building_height)s, %(front_setback)s, %(side_setback)s, %(rear_setback)s, 
-                %(solar_setback)s, %(special_setback)s, %(liquefaction_hazard)s, %(landslide_hazard)s, %(geo_report_required)s,
-                %(fema_flood_zone)s, %(hydric_soils_hazard)s, %(wetlands_on_property)s, %(erosion_control_required)s, 
-                %(stormwater_requirements)s, %(tree_preservation_reqs)s, %(special_fire_marshal_reqs)s, %(radon)s, %(sidewalks_required)s, %(approach_permit)s
+                %(property_id)s, %(jurisdiction)s, %(fire_district)s, %(fire_district_source)s, 
+                %(zoning)s, %(overlay)s, %(max_lot_coverage)s, %(max_building_height)s, 
+                %(front_setback)s, %(side_setback)s, %(rear_setback)s, %(solar_setback)s, 
+                %(special_setback)s, %(easements)s, %(easements_source)s, %(liquefaction_hazard)s, 
+                %(landslide_hazard)s, %(geo_report_required)s, %(fema_flood_zone)s, 
+                %(hydric_soils_hazard)s, %(wetlands_on_property)s, %(erosion_control_required)s, 
+                %(stormwater_requirements)s, %(tree_preservation_reqs)s, 
+                %(special_fire_marshal_reqs)s, %(radon)s, %(sidewalks_required)s, 
+                %(approach_permit)s
             );
             """
         
@@ -782,6 +1239,7 @@ def save_planning_data(property_id, jurisdiction, fire_district, zoning_overlay,
             "property_id": property_id,
             "jurisdiction": jurisdiction,
             "fire_district": fire_district,
+            "fire_district_source": fire_district_source,
             "zoning": zoning_overlay["zoning"],
             "overlay": zoning_overlay["overlay"],
             **planning_data,
@@ -790,11 +1248,13 @@ def save_planning_data(property_id, jurisdiction, fire_district, zoning_overlay,
             "landslide_hazard": landslide,
             "geo_report_required": geo_report_required
         }
+        
         cursor.execute(query, data)
         conn.commit()
-        print("✅ Planning data saved to database.")
+        print("✅ Planning data saved successfully")
     except Exception as e:
-        print(f"❌ Planning DB error: {e}")
+        print(f"❌ Error saving planning data: {e}")
+        raise
     finally:
         if conn:
             cursor.close()
@@ -954,27 +1414,44 @@ def main(taxlot_id):
         elev2, _ = get_elevation(lat2, lon2)
         slope = round(abs(elev2 - elev1) / 5 * 100, 2) if elev1 and elev2 else None
 
+        print("\n🔍 Starting building detection...")
         trees, trees_src = detect_trees(lat, lon)
-        buildings, buildings_src = detect_buildings(lat, lon)
+        print(f"Trees detected: {trees} (Source: {trees_src})")
+        
+        buildings, buildings_src = detect_buildings(lat, lon, property_id)
+        print(f"Buildings detected: {buildings} (Source: {buildings_src})")
+        
         power, power_src = detect_power_infrastructure(lat, lon, property_id)
+        print(f"Power infrastructure detected: {power} (Source: {power_src})")
 
         insert_google_earth_data(property_id, lat, lon, slope, elev_src, trees, trees_src, buildings, buildings_src, power, power_src)
 
         # Step 5: Planning Data
         jurisdiction = get_jurisdiction_from_dial(property_id)
-        fire_district = get_fire_district_from_dial(address)
+        fire_district, fire_district_source = get_fire_district(property_id)
         zoning_overlay = get_zoning_and_overlay_from_dial(property_id)
-        planning = analyze_setbacks_and_restrictions()
+        planning = analyze_setbacks_and_restrictions(zoning_overlay["zoning"], address)
+        if "easements" in html_data:
+            print(f"\n📦 Adding easement data to planning dictionary:")
+            print(f"   Easement text: {html_data['easements']}")
+            print(f"   Source URL: {html_data['easements_source']}")
+            planning["easements"] = html_data["easements"]
+            planning["easements_source"] = html_data["easements_source"]
+        else:
+            print("\n⚠️ No easement data found in html_data")
         liquefaction = get_liquefaction_hazard(address)
         landslide = get_landslide_hazard(address)
         soil_pdf_path = "scrappers/soil_report.pdf"  # update path if needed
         geo_required = get_geo_report_required(soil_pdf_path, liquefaction)
         hardcoded = get_hardcoded_values()
-        save_planning_data(property_id, jurisdiction, fire_district, zoning_overlay, planning,
+        save_planning_data(property_id, jurisdiction, fire_district, fire_district_source, zoning_overlay, planning,
                            liquefaction, landslide, geo_required, hardcoded)
 
         # Step 6: Utility Info
-        check_water_systems(property_id)
+        print("\n🔍 Gathering utility information...")
+        utility_details = get_utility_details(property_id)
+        save_utility_details(property_id, utility_details)
+        print(f"✅ Utility details gathered and saved: {utility_details}")
 
         print("\n✅ All data processing complete.")
 
@@ -999,3 +1476,152 @@ def run_pipeline(req: TaxlotRequest):
         return {"status": "success", "message": f"Pipeline completed for {req.taxlot_id}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+def get_utility_details(property_id: str) -> dict:
+    """
+    Fetch and evaluate utility info (wastewater, water, power) from DIAL and WRD sources.
+    Returns the best available value for each type and their sources.
+    """
+    result = {
+        "waste_water_type": "Unknown",
+        "water_type": "Unknown",
+        "power_type": "Unknown",
+        "sources": {
+            "waste_water": None,
+            "water": None,
+            "power": "https://www.deschutes.org/"  # Default source
+        }
+    }
+
+    try:
+        # Step 1: Check for septic permit via DIAL
+        septic_url = f"https://dial.deschutes.org/Real/Permits/{property_id}"
+        response = requests.get(septic_url)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, "html.parser")
+            permit_table = soup.find("table", {"class": "infoTable"})
+            found_septic = False
+
+            if permit_table:
+                for row in permit_table.find_all("tr"):
+                    cells = row.find_all("td")
+                    if len(cells) >= 3:
+                        permit_type = cells[1].text.strip()
+                        status = cells[2].text.strip()
+
+                        if permit_type.lower() == "septic":
+                            found_septic = True
+                            if status.lower() in ["finaled", "permit issued"]:
+                                result["waste_water_type"] = "Septic"
+                            elif any(k in status.lower() for k in ["eval", "evaluation", "feasibility"]):
+                                result["waste_water_type"] = "None"
+                            break
+
+            if not found_septic:
+                result["waste_water_type"] = "No septic permit found."
+            result["sources"]["waste_water"] = septic_url
+
+        # Step 2: Check service providers page for sewer and domestic water info
+        providers_url = f"https://dial.deschutes.org/Real/ServiceProviders/{property_id}"
+        response = requests.get(providers_url)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, "html.parser")
+            provider_text = soup.get_text(separator="\n").lower()
+
+            if "sewer" in provider_text:
+                if "oregon water utilities" in provider_text:
+                    sewer_line = "Sewer - Oregon Water Utilities - Cline Butte INC"
+                    # Combine septic + sewer info if both exist
+                    if result["waste_water_type"] != "No septic permit found.":
+                        result["waste_water_type"] += f", {sewer_line}"
+                    else:
+                        result["waste_water_type"] = sewer_line
+                result["sources"]["waste_water"] = providers_url
+
+            if "domestic water" in provider_text:
+                if "oregon water utilities" in provider_text:
+                    result["water_type"] = "Well, Domestic - Oregon Water Utilities - Cline Butte INC"
+                else:
+                    result["water_type"] = "Public"
+                result["sources"]["water"] = providers_url
+
+            if "underground" in provider_text:
+                result["power_type"] = "Underground"
+                result["sources"]["power"] = providers_url
+            elif "overhead" in provider_text:
+                result["power_type"] = "Overhead"
+                result["sources"]["power"] = providers_url
+
+        # Step 3: Check well if still unknown
+        if result["water_type"] == "Unknown":
+            well_result, well_source = check_for_well()
+            if "Well" in well_result:
+                result["water_type"] = "Well"
+            result["sources"]["water"] = well_source
+
+        # Final fallback defaults
+        if result["power_type"] == "Unknown":
+            result["power_type"] = "Underground"
+        if not result["sources"]["power"]:
+            result["sources"]["power"] = "https://www.deschutes.org/"
+
+    except Exception as e:
+        print(f"❌ Error fetching utility details: {e}")
+
+    return result
+
+def save_utility_details(property_id: str, utility_data: dict):
+    """
+    Save utility details to the database.
+    
+    Args:
+        property_id (str): Deschutes County property ID
+        utility_data (dict): Dictionary containing utility information
+    """
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASS,
+            port=DB_PORT
+        )
+        cursor = conn.cursor()
+        
+        query = """
+        INSERT INTO utility_details (
+            id, waste_water_type, waste_water_type_source,
+            water_type, water_type_source,
+            power_type, power_type_source,
+            created_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+        ON CONFLICT (id) DO UPDATE
+        SET 
+            waste_water_type = EXCLUDED.waste_water_type,
+            waste_water_type_source = EXCLUDED.waste_water_type_source,
+            water_type = EXCLUDED.water_type,
+            water_type_source = EXCLUDED.water_type_source,
+            power_type = EXCLUDED.power_type,
+            power_type_source = EXCLUDED.power_type_source,
+            created_at = NOW();
+        """
+        
+        cursor.execute(query, (
+            property_id,
+            utility_data["waste_water_type"],
+            utility_data["sources"]["waste_water"],
+            utility_data["water_type"],
+            utility_data["sources"]["water"],
+            utility_data["power_type"],
+            utility_data["sources"]["power"]
+        ))
+        
+        conn.commit()
+        print("✅ Utility details saved to database")
+        
+    except Exception as e:
+        print(f"❌ Error saving utility details: {e}")
+    finally:
+        if conn:
+            cursor.close()
+            conn.close()
