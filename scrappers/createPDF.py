@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey, DateTime, text
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -7,104 +7,105 @@ from fastapi.responses import FileResponse
 import os
 
 # Database Configuration
-DATABASE_URL = "postgresql://postgres:12345678@sage-database.cbmq4e26s31g.eu-north-1.rds.amazonaws.com:5432/sagedatabase"
+DATABASE_URL = "postgresql://postgres:12345678@sage-database.cbmq4e26s31g.eu-north-1.rds.amazonaws.com:5432/sagedatabase?client_encoding=utf8"
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, connect_args={'options': '-c timezone=UTC'})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 # Define Table Models
 class BasicInfo(Base):
     __tablename__ = "basic_info"
-    id = Column(Integer, primary_key=True, index=True)
-    owner_name = Column(String)
-    owner_name_source = Column(String)
-    mailing_address = Column(String)
-    mailing_address_source = Column(String)
-    parcel_number = Column(String)
-    parcel_number_source = Column(String)
-    legal = Column(String)
-    legal_source = Column(String)
-    account = Column(String)
-    site_address = Column(String)
-    site_address_source = Column(String)
-    acres = Column(Float)
-    acres_source = Column(String)
-    plat_map = Column(Boolean)
-    plat_map_url = Column(String)
-    tax_map = Column(Boolean)
-    tax_map_url = Column(String)
+    id = Column(String, primary_key=True, nullable=False)
+    owner_name = Column(String, nullable=True)
+    owner_name_source = Column(String, nullable=True)
+    mailing_address = Column(String, nullable=True)
+    mailing_address_source = Column(String, nullable=True)
+    parcel_number = Column(String, nullable=True)
+    parcel_number_source = Column(String, nullable=True)
+    legal = Column(String, nullable=True)
+    legal_source = Column(String, nullable=True)
+    account = Column(String, nullable=True)
+    site_address = Column(String, nullable=True)
+    site_address_source = Column(String, nullable=True)
+    acres = Column(String, nullable=True)
+    acres_source = Column(String, nullable=True)
+    plat_map = Column(String, nullable=True)
+    plat_map_url = Column(String, nullable=True)
+    tax_map = Column(String, nullable=True)
+    tax_map_url = Column(String, nullable=True)
 
 class GoogleEarthInfo(Base):
     __tablename__ = "google_earth_info"
-    id = Column(String, primary_key=True, index=True)
-    property_id = Column(String, ForeignKey("basic_info.id"))
-    gps_coord = Column(String)
-    gps_coord_source = Column(String)
-    slope = Column(String)
-    slope_source = Column(String)
-    power_visible = Column(Boolean)
-    power_visible_source = Column(String)
-    existing_structures = Column(Boolean)
-    existing_structures_source = Column(String)
-    trees_brush = Column(Boolean)
-    trees_brush_source = Column(String)
+    power_visible = Column(Boolean, nullable=True)
+    trees_brush = Column(Boolean, nullable=True)
+    existing_structures = Column(Boolean, nullable=True)
+    slope = Column(String, nullable=True)
+    slope_source = Column(String, nullable=True)
+    power_visible_source = Column(String, nullable=True)
+    existing_structures_source = Column(String, nullable=True)
+    property_id = Column(String, primary_key=True, nullable=False)
+    trees_brush_source = Column(String, nullable=True)
+    gps_coord = Column(String, nullable=True)
+    gps_coord_source = Column(String, nullable=True)
 
 class DesignData(Base):
     __tablename__ = "design_data"
-    id = Column(Integer, primary_key=True, index=True)
-    ground_snow_load = Column(String)
-    ground_snow_load_source = Column(String)
-    seismic_design_category = Column(String)
-    seismic_design_category_source = Column(String)
-    basic_wind_speed = Column(String)
-    basic_wind_speed_source = Column(String)
-    ultimate_wind_design_speed = Column(String)
-    ultimate_wind_design_speed_source = Column(String)
-    exposure = Column(String)
-    exposure_source = Column(String)
-    frost_depth = Column(String)
-    frost_depth_source = Column(String)
+    id = Column(String, primary_key=True, nullable=False)
+    ground_snow_load = Column(String, nullable=True)
+    ground_snow_load_source = Column(String, nullable=True)
+    seismic_design_category = Column(String, nullable=True)
+    seismic_design_category_source = Column(String, nullable=True)
+    basic_wind_speed = Column(String, nullable=True)
+    basic_wind_speed_source = Column(String, nullable=True)
+    ultimate_wind_design_speed = Column(String, nullable=True)
+    ultimate_wind_design_speed_source = Column(String, nullable=True)
+    exposure = Column(String, nullable=True)
+    exposure_source = Column(String, nullable=True)
+    frost_depth = Column(String, nullable=True)
+    frost_depth_source = Column(String, nullable=True)
 
 class UtilityDetails(Base):
     __tablename__ = "utility_details"
-    id = Column(Integer, primary_key=True, index=True)
-    waste_water_type = Column(String)
-    waste_water_type_source = Column(String)
-    water_type = Column(String)
-    water_type_source = Column(String)
-    power_type = Column(String)
-    power_type_source = Column(String)
+    id = Column(String, primary_key=True, nullable=False)
+    created_at = Column(DateTime, nullable=True)
+    waste_water_type = Column(String, nullable=True)
+    waste_water_type_source = Column(String, nullable=True)
+    water_type = Column(String, nullable=True)
+    power_type = Column(String, nullable=True)
+    power_type_source = Column(String, nullable=True)
+    water_type_source = Column(String, nullable=True)
 
 class PlanningData(Base):
     __tablename__ = "planning_data"
-    id = Column(Integer, primary_key=True, index=True)
-    property_id = Column(Integer, ForeignKey("basic_info.id"))
-    jurisdiction = Column(String)
-    fire_district = Column(String)
-    zoning = Column(String)
-    overlay = Column(String)
-    max_lot_coverage = Column(String)
-    max_building_height = Column(String)
-    front_setback = Column(String)
-    side_setback = Column(String)
-    rear_setback = Column(String)
-    solar_setback = Column(Boolean)
-    special_setback = Column(String)
-    easements = Column(String)
-    liquefaction_hazard = Column(String)
-    geo_report_required = Column(String)
-    landslide_hazard = Column(String)
-    fema_flood_zone = Column(String)
-    hydric_soils_hazard = Column(String)
-    wetlands_on_property = Column(String)
-    erosion_control_required = Column(String)
-    stormwater_requirements = Column(String)
-    tree_preservation_reqs = Column(String)
-    special_fire_marshal_reqs = Column(String)
-    radon = Column(String)
-    sidewalks_required = Column(String)
-    approach_permit = Column(String)
+    property_id = Column(String, primary_key=True, nullable=False)
+    jurisdiction = Column(String, nullable=True)
+    fire_district = Column(String, nullable=True)
+    zoning = Column(String, nullable=True)
+    overlay = Column(String, nullable=True)
+    max_lot_coverage = Column(String, nullable=True)
+    max_building_height = Column(String, nullable=True)
+    front_setback = Column(String, nullable=True)
+    side_setback = Column(String, nullable=True)
+    rear_setback = Column(String, nullable=True)
+    solar_setback = Column(String, nullable=True)
+    special_setback = Column(String, nullable=True)
+    liquefaction_hazard = Column(String, nullable=True)
+    landslide_hazard = Column(String, nullable=True)
+    geo_report_required = Column(String, nullable=True)
+    fema_flood_zone = Column(String, nullable=True)
+    hydric_soils_hazard = Column(String, nullable=True)
+    wetlands_on_property = Column(String, nullable=True)
+    erosion_control_required = Column(String, nullable=True)
+    stormwater_requirements = Column(String, nullable=True)
+    tree_preservation_reqs = Column(String, nullable=True)
+    special_fire_marshal_reqs = Column(String, nullable=True)
+    radon = Column(String, nullable=True)
+    sidewalks_required = Column(String, nullable=True)
+    approach_permit = Column(String, nullable=True)
+    fire_district_source = Column(String, nullable=True)
+    easements = Column(String, nullable=True)
+    easements_source = Column(String, nullable=True)
 
 # FastAPI App
 app = FastAPI()
@@ -122,7 +123,7 @@ def generate_pdf(data, pdf_path):
     c = canvas.Canvas(pdf_path, pagesize=letter)
     width, height = letter
     margin = 50
-    line_height = 14  # Adjust line spacing
+    line_height = 14
 
     def draw_text(x, y, text, bold=False, max_width=500):
         c.setFont("Helvetica-Bold" if bold else "Helvetica", 10)
@@ -133,14 +134,14 @@ def generate_pdf(data, pdf_path):
             lines = [str(text)]
 
         for line in lines:
-            if y <= margin:  # If near bottom, create a new page
+            if y <= margin:
                 c.showPage()
-                y = height - margin  # Reset y position
+                y = height - margin
 
             c.drawString(x, y, line)
             y -= line_height
 
-        return y - line_height  # Return updated y position
+        return y - line_height
 
     y = height - margin
 
@@ -177,50 +178,63 @@ def generate_pdf(data, pdf_path):
     if data["utility"]:
         y = draw_text(50, y - 20, "UTILITY DETAILS:", bold=True)
         for key, value in data["utility"].items():
-            if "_source" not in key:
+            if key != "created_at" and "_source" not in key:
                 y = draw_text(50, y, f"{key.replace('_', ' ').title()}: {value}")
                 source_key = f"{key}_source"
                 if source_key in data["utility"] and data["utility"][source_key]:
                     y = draw_text(50, y, f"Source: {data['utility'][source_key]}")
 
-    # PLANNING DATA (No Sources)
+    # PLANNING DATA
     if data["planning"]:
         y = draw_text(50, y - 20, "PLANNING DATA:", bold=True)
         for key, value in data["planning"].items():
-            y = draw_text(50, y, f"{key.replace('_', ' ').title()}: {value}")
+            if "_source" not in key and key != "property_id":
+                y = draw_text(50, y, f"{key.replace('_', ' ').title()}: {value}")
+                source_key = f"{key}_source"
+                if source_key in data["planning"] and data["planning"][source_key]:
+                    y = draw_text(50, y, f"Source: {data['planning'][source_key]}")
 
     c.save()
 
 # API Endpoint to Generate PDF and Return a Downloadable Link
 @app.get("/generate-pdf/{property_id}")
-def fetch_and_generate_pdf(property_id: int, db: Session = Depends(get_db)):
-    basic = db.query(BasicInfo).filter(BasicInfo.id == property_id).first()
-    google = db.query(GoogleEarthInfo).filter(GoogleEarthInfo.property_id == str(property_id)).first()
-    design = db.query(DesignData).filter(DesignData.id == property_id).first()
-    planning = db.query(PlanningData).filter(PlanningData.property_id == property_id).first()
-    utility = db.query(UtilityDetails).filter(UtilityDetails.id == str(property_id)).first()
+def fetch_and_generate_pdf(property_id: str, db: Session = Depends(get_db)):
+    try:
+        # Ensure property_id is a string for database queries
+        property_id = str(property_id)
+        
+        # Use text() to force explicit casting in the queries
+        basic = db.query(BasicInfo).filter(text("basic_info.id::text = :property_id")).params(property_id=property_id).first()
+        google = db.query(GoogleEarthInfo).filter(text("google_earth_info.property_id::text = :property_id")).params(property_id=property_id).first()
+        design = db.query(DesignData).filter(text("design_data.id::text = :property_id")).params(property_id=property_id).first()
+        planning = db.query(PlanningData).filter(text("planning_data.property_id::text = :property_id")).params(property_id=property_id).first()
+        utility = db.query(UtilityDetails).filter(text("utility_details.id::text = :property_id")).params(property_id=property_id).first()
 
-    if not basic:
-        raise HTTPException(status_code=404, detail="Property ID not found")
+        if not basic:
+            raise HTTPException(status_code=404, detail="Property ID not found")
 
-    # Convert SQLAlchemy objects to dictionaries (to remove `sa Instance State`)
-    def to_dict(obj):
-        return {column.name: getattr(obj, column.name) for column in obj.__table__.columns} if obj else {}
+        def to_dict(obj):
+            if not obj:
+                return {}
+            return {column.name: str(getattr(obj, column.name)) if getattr(obj, column.name) is not None else None 
+                   for column in obj.__table__.columns}
 
-    data = {
-        "basic": to_dict(basic),
-        "google": to_dict(google),
-        "design": to_dict(design),
-        "utility": to_dict(utility),
-        "planning": to_dict(planning),
-    }
+        data = {
+            "basic": to_dict(basic),
+            "google": to_dict(google),
+            "design": to_dict(design),
+            "utility": to_dict(utility),
+            "planning": to_dict(planning),
+        }
 
-    pdf_filename = f"property_report_{property_id}.pdf"
-    pdf_path = os.path.join(os.getcwd(), pdf_filename)
+        pdf_filename = f"property_report_{property_id}.pdf"
+        pdf_path = os.path.join(os.getcwd(), pdf_filename)
 
-    generate_pdf(data, pdf_path)
+        generate_pdf(data, pdf_path)
 
-    return {"download_url": f"/download-pdf/{pdf_filename}"}
+        return {"download_url": f"/download-pdf/{pdf_filename}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating PDF: {str(e)}")
 
 # Endpoint to Download PDF
 @app.get("/download-pdf/{pdf_filename}")
