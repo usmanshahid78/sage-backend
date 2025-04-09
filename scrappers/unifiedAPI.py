@@ -1443,8 +1443,23 @@ def main(taxlot_id):
             planning["easements_source"] = html_data["easements_source"]
         else:
             print("\n⚠️ No easement data found in html_data")
-        liquefaction = get_liquefaction_hazard(address)
-        landslide = get_landslide_hazard(address)
+
+        planning_dict = {}
+
+        # Fire district already added
+
+        try:
+            liquefaction = get_liquefaction_hazard(address)
+            planning_dict["liquefaction_hazard"] = liquefaction
+        except Exception as e:
+            print(f"Error getting liquefaction hazard: {e}")
+
+        try:
+            landslide = get_landslide_hazard(address)
+            planning_dict["landslide_hazard"] = landslide
+        except Exception as e:
+            print(f"Error getting landslide hazard: {e}")
+
         soil_pdf_path = "scrappers/soil_report.pdf"  # update path if needed
         geo_required = get_geo_report_required(soil_pdf_path, liquefaction)
         hardcoded = get_hardcoded_values()
