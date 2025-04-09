@@ -1235,6 +1235,7 @@ def save_planning_data(property_id, jurisdiction, fire_district, fire_district_s
             );
             """
         
+        # Ensure all required fields exist with default values
         data = {
             "property_id": property_id,
             "jurisdiction": jurisdiction,
@@ -1242,6 +1243,8 @@ def save_planning_data(property_id, jurisdiction, fire_district, fire_district_s
             "fire_district_source": fire_district_source,
             "zoning": zoning_overlay["zoning"],
             "overlay": zoning_overlay["overlay"],
+            "easements": planning_data.get("easements", "None"),
+            "easements_source": planning_data.get("easements_source", "None"),
             **planning_data,
             **hardcoded_values,
             "liquefaction_hazard": liquefaction,
@@ -1412,6 +1415,7 @@ def main(taxlot_id):
         print(f"Debug - After geodesic: lat2={lat2}, lon2={lon2}")
         elev1, elev_src = get_elevation(lat, lon)
         elev2, _ = get_elevation(lat2, lon2)
+        # Calculate slope as percentage
         slope = round(abs(elev2 - elev1) / 5 * 100, 2) if elev1 and elev2 else None
 
         print("\n🔍 Starting building detection...")
@@ -1579,6 +1583,11 @@ def save_utility_details(property_id: str, utility_data: dict):
         utility_data (dict): Dictionary containing utility information
     """
     try:
+        print(f"\n💾 Saving utility details for property ID: {property_id}")
+        print(f"   Waste Water Type: {utility_data.get('waste_water_type', 'Unknown')}")
+        print(f"   Water Type: {utility_data.get('water_type', 'Unknown')}")
+        print(f"   Power Type: {utility_data.get('power_type', 'Unknown')}")
+
         conn = psycopg2.connect(
             host=DB_HOST,
             database=DB_NAME,
@@ -1606,21 +1615,25 @@ def save_utility_details(property_id: str, utility_data: dict):
             created_at = NOW();
         """
         
-        cursor.execute(query, (
+        # Ensure all required fields exist with default values
+        values = (
             property_id,
-            utility_data["waste_water_type"],
-            utility_data["sources"]["waste_water"],
-            utility_data["water_type"],
-            utility_data["sources"]["water"],
-            utility_data["power_type"],
-            utility_data["sources"]["power"]
-        ))
+            utility_data.get("waste_water_type", "Unknown"),
+            utility_data.get("sources", {}).get("waste_water", "None"),
+            utility_data.get("water_type", "Unknown"),
+            utility_data.get("sources", {}).get("water", "None"),
+            utility_data.get("power_type", "Unknown"),
+            utility_data.get("sources", {}).get("power", "None")
+        )
         
+        cursor.execute(query, values)
         conn.commit()
         print("✅ Utility details saved to database")
         
     except Exception as e:
         print(f"❌ Error saving utility details: {e}")
+        print(f"   Data being saved: {utility_data}")
+        raise
     finally:
         if conn:
             cursor.close()
