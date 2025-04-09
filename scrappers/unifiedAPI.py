@@ -1448,20 +1448,25 @@ def main(taxlot_id):
 
         # Fire district already added
 
+        # Hazards
         try:
             liquefaction = get_liquefaction_hazard(address)
-            planning_dict["liquefaction_hazard"] = liquefaction
         except Exception as e:
             print(f"Error getting liquefaction hazard: {e}")
+            liquefaction = "UNKNOWN"
 
         try:
             landslide = get_landslide_hazard(address)
-            planning_dict["landslide_hazard"] = landslide
         except Exception as e:
             print(f"Error getting landslide hazard: {e}")
+            landslide = "UNKNOWN"
 
-        soil_pdf_path = "scrappers/soil_report.pdf"  # update path if needed
-        geo_required = get_geo_report_required(soil_pdf_path, liquefaction)
+        try:
+            geo_required = get_geo_report_required(soil_pdf_path, liquefaction)
+        except Exception as e:
+            print(f"Error evaluating geo report: {e}")
+            geo_required = "UNKNOWN"
+
         hardcoded = get_hardcoded_values()
         save_planning_data(property_id, jurisdiction, fire_district, fire_district_source, zoning_overlay, planning,
                            liquefaction, landslide, geo_required, hardcoded)
