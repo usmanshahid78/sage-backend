@@ -164,7 +164,8 @@ def insert_data_into_db(property_id, lat, lon, slope, has_trees, has_buildings):
             host=DB_HOST,
             dbname=DB_NAME,
             user=DB_USER,
-            password=DB_PASS,
+            p
+            ssword=DB_PASS,
             port=DB_PORT
         )
         cursor = conn.cursor()
